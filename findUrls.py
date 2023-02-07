@@ -14,7 +14,7 @@ warnings.filterwarnings('ignore', category=XMLParsedAsHTMLWarning)
 
 BASE_URL = sys.argv[-1]
 url_check = urlparse(BASE_URL)
-print(url_check)
+#print(url_check)
 if url_check.scheme == '' or url_check.netloc == '' :
     print('--> Please enter a valid URL')
     print('--> Usage: python3 findUrls.py [-s] https://yourwebsite/')
@@ -144,7 +144,9 @@ def removeDuplicatesURLS(url_list) :
 def buildURLS(url_list):
     result = []
     for link in url_list :
-        if link[0] == "/" :
+        if link is None :
+            pass
+        elif link[0] == "/" :
             result.append(urlparse(BASE_URL).scheme + '://' + urlparse(BASE_URL).netloc + link)
         elif link[0] == "#" or link[0] == "?" or link[0] == "@" or link[0] == ":" :
             result.append(BASE_URL + link)
