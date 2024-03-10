@@ -144,7 +144,7 @@ def removeDuplicatesURLS(url_list) :
 def buildURLS(url_list):
     result = []
     for link in url_list :
-        if link is None :
+        if link is None or len(link) == 0 :
             pass
         elif link[0] == "/" :
             result.append(urlparse(BASE_URL).scheme + '://' + urlparse(BASE_URL).netloc + link)
