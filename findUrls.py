@@ -117,16 +117,18 @@ def getNewURLS(url_list):
 #(str --> list)
 def getURLS(url):
     rheaders = {'User-agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'}
-    r = requests.get(url,headers=rheaders,verify=False)
-    #print(r.text)
-    soup = BeautifulSoup(r.text, 'html.parser')
-    result = []
-    for link in soup.find_all('a'):
-        result.append(link.get('href'))
-    for link in soup.find_all('link'):
-        result.append(link.get('href'))
+    try:
+        r = requests.get(url,headers=rheaders,verify=False)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        result = []
+        for link in soup.find_all('a'):
+            result.append(link.get('href'))
+        for link in soup.find_all('link'):
+            result.append(link.get('href'))
+    except Exception as e:
+        print("[-] Error while requesting " + url)
+        result = []
     return result
-
 
 #Delete duplicates in a list 
 #(list --> list)
@@ -174,5 +176,3 @@ if __name__ == '__main__' :
     main()
     print('-----------------------------------------------------------')
     print('')
-    
-
