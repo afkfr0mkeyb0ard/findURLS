@@ -30,7 +30,7 @@ except Exception as e:
 if url_check.scheme == '' or url_check.netloc == '' :
     exitAndHelp()
 
-print(f'[+] Using url: {BASE_URL}')
+print(f'[+] Scanning url: {BASE_URL}')
 print('')
 print('-----------------------------------------------------------')
 DOMAIN = url_check.netloc
@@ -51,20 +51,19 @@ def main():
     urls = buildURLS(urls)
     urls = excludeOtherDomainsURLS(urls,BASE_URL)
 
-    for url in urls :
-        FOUND_URLS.append(url)
-        print(url)
-
+    FOUND_URLS = FOUND_URLS + urls
+    
+    writeURLStoFile(FOUND_URLS)
+    if VERBOSE:
+    	printAllElementsOfList(FOUND_URLS)
+    
     DONE_URLS.append(BASE_URL)
-    newurlsfound = True
-
+    
     if len(FOUND_URLS) == 0 :
         print('[-] No new URL found, try another URL')
         sys.exit()
 
-    writeURLStoFile(FOUND_URLS)
-
-
+    newurlsfound = True
     if SPIDER :                                             #if Spider mode activated
         while newurlsfound :                                #while we find new URLS
             newurlsfound = False
@@ -78,30 +77,40 @@ def main():
                 and url.split(".")[-1] != 'ico') \
                 and url.find("#") == -1 :
                     print('')
-                    print(f'[+] Using url: {url}')
+                    print(f'[+] Scanning url: {url}')
                     urls = getURLS(url)
                     urls = removeDuplicatesList(urls)
                     urls = buildURLS(urls)
                     urls = excludeOtherDomainsURLS(urls,BASE_URL)
                     new_urls = getNewURLS(urls)
-                    FOUND_URLS = FOUND_URLS + new_urls
-                    FOUND_URLS = list(set(FOUND_URLS))
                     
                     if len(new_urls) != 0 :
-                        newurlsfound = True                     # to continue spidering
+                        newurlsfound = True 	                  # to continue spidering
+                        for new_url in new_urls:
+                            FOUND_URLS.append(new_url)
                         writeURLStoFile(FOUND_URLS)             # to save already discovered urls
+                        if VERBOSE:
+                            printAllElementsOfList(new_urls)
                     DONE_URLS.append(url)
-            
 
         writeURLStoFile(FOUND_URLS) # Writting urls into a file
         print('')
         print(f'[+] File written to {OUTPUT_PATH}')
         print('')
 
+#Print all elements of a list (one per line)
+#(none)
+def printAllElementsOfList(table):
+    temp = table.copy()
+    temp.sort()
+    for el in temp:
+        print(el)
+
 #Write URLS into a file
+#(none)
 def writeURLStoFile(url_list):
     file = open(OUTPUT_PATH,'w+',encoding='utf-8')
-    temp = url_list
+    temp = url_list.copy()
     temp.sort()
     for url in temp :
         file.write(url + '\n')
