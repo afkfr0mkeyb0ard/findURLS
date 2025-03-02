@@ -1,19 +1,18 @@
 import requests
 import re
 
-#JS_FILE = open("myscript.js","r",encoding="utf-8")
-#JS_CONTENT = JS_FILE.read()
-#JS_FILE.close()
-
+#Return a list of all URLs that match the pattern
+#(string,string ---> list)
 def findPattern(pattern,content):
     compiled = re.compile(r''+pattern+'')
     urls = compiled.findall(content)
     urls = list(set(urls))
     return urls
 
-def findURLinJS(url):
-    JS_URL = requests.get(url,headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0'})
-    JS_CONTENT = JS_URL.text
+#Return a list of all URLs found in a content
+#(string ---> list)
+def findURLinJS(content):
+    JS_CONTENT = content
 
     FOUND = {}
 
@@ -53,12 +52,9 @@ def findURLinJS(url):
     #+'/api/event'
     FOUND['pattern12'] = findPattern("\+'(\/[^']+)'",JS_CONTENT)
 
-    print(FOUND)
-
     sub_result = []
     for key, value in FOUND.items():
         sub_result = sub_result + value
 
     RESULT = [x for x in sub_result if x != '' and x != ' ']
-    print(RESULT)
-
+    return(RESULT)
