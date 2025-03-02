@@ -17,7 +17,7 @@ for arg in sys.argv:
 
 def exitAndHelp():
     print('[-] Please enter a valid URL')
-    print('Usage: python3 findUrls.py [-s] https://yourwebsite/')
+    print('Usage: python3 findUrls.py [-s] [-v] https://yourwebsite/')
     print('       -s       Enable Spider mode. Will repeat the scan for every new URL found')
     print('       -v       Enable Verbose mode. To display all found URLs')
     sys.exit()
