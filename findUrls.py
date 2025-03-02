@@ -11,35 +11,43 @@ import time
 import os
 warnings.filterwarnings('ignore', category=XMLParsedAsHTMLWarning)
 
+for arg in sys.argv:
+	if arg.find("http:") != -1 or arg.find("https:") != -1:
+		BASE_URL = arg
 
-BASE_URL = sys.argv[-1]
-url_check = urlparse(BASE_URL)
-#print(url_check)
-if url_check.scheme == '' or url_check.netloc == '' :
-    print('--> Please enter a valid URL')
-    print('--> Usage: python3 findUrls.py [-s] https://yourwebsite/')
-    print('-s       Enable Spider mode. Will repeat the scan for every new URL found')
+def exitAndHelp():
+    print('[-] Please enter a valid URL')
+    print('Usage: python3 findUrls.py [-s] https://yourwebsite/')
+    print('       -s       Enable Spider mode. Will repeat the scan for every new URL found')
+    print('       -v       Enable Verbose mode. To display all found URLs')
     sys.exit()
+    
+try:
+	url_check = urlparse(BASE_URL)
+except Exception as e:
+	exitAndHelp()
 
-print(f'--> Using url: {BASE_URL}')
+if url_check.scheme == '' or url_check.netloc == '' :
+    exitAndHelp()
+
+print(f'[+] Using url: {BASE_URL}')
 print('')
 print('-----------------------------------------------------------')
 DOMAIN = url_check.netloc
 FOUND_URLS = []
 DONE_URLS = []
-SPIDER = False
-if '-s' in sys.argv :
-    SPIDER = True
+SPIDER = '-s' in sys.argv
+VERBOSE = '-v' in sys.argv
 
 CURRENT_DIR = os.getcwd()
 timestamp = str(time.time()).split(".")[0]
-FILE_PATH = CURRENT_DIR + '/findUrls_result_' + timestamp + '_' + DOMAIN + '.txt'
+OUTPUT_PATH = CURRENT_DIR + '/findUrls_result_' + timestamp + '_' + DOMAIN + '.txt'
 
 def main():
     global FOUND_URLS,DONE_URLS
 
     urls = getURLS(BASE_URL)
-    urls = removeDuplicatesURLS(urls)
+    urls = removeDuplicatesList(urls)
     urls = buildURLS(urls)
     urls = excludeOtherDomainsURLS(urls,BASE_URL)
 
@@ -51,7 +59,7 @@ def main():
     newurlsfound = True
 
     if len(FOUND_URLS) == 0 :
-        print('[-] --> No new URL found, try another URL')
+        print('[-] No new URL found, try another URL')
         sys.exit()
 
     writeURLStoFile(FOUND_URLS)
@@ -70,16 +78,15 @@ def main():
                 and url.split(".")[-1] != 'ico') \
                 and url.find("#") == -1 :
                     print('')
-                    print(f'--> Using url: {url}')
+                    print(f'[+] Using url: {url}')
                     urls = getURLS(url)
-                    urls = removeDuplicatesURLS(urls)
+                    urls = removeDuplicatesList(urls)
                     urls = buildURLS(urls)
                     urls = excludeOtherDomainsURLS(urls,BASE_URL)
                     new_urls = getNewURLS(urls)
-                    for new_url in new_urls :
-                        if new_url not in FOUND_URLS :
-                            FOUND_URLS.append(new_url)
-                            print(new_url)
+                    FOUND_URLS = FOUND_URLS + new_urls
+                    FOUND_URLS = list(set(FOUND_URLS))
+                    
                     if len(new_urls) != 0 :
                         newurlsfound = True                     # to continue spidering
                         writeURLStoFile(FOUND_URLS)             # to save already discovered urls
@@ -88,12 +95,12 @@ def main():
 
         writeURLStoFile(FOUND_URLS) # Writting urls into a file
         print('')
-        print(f'[+] --> File written to {FILE_PATH}')
+        print(f'[+] File written to {OUTPUT_PATH}')
         print('')
 
 #Write URLS into a file
 def writeURLStoFile(url_list):
-    file = open(FILE_PATH,'w+',encoding='utf-8')
+    file = open(OUTPUT_PATH,'w+',encoding='utf-8')
     temp = url_list
     temp.sort()
     for url in temp :
@@ -132,14 +139,8 @@ def getURLS(url):
 
 #Delete duplicates in a list 
 #(list --> list)
-def removeDuplicatesURLS(url_list) :
-    result = []
-    for link in url_list :
-        if link in result :
-            pass
-        else :
-            result.append(link)
-    return result
+def removeDuplicatesList(url_list) :
+    return list(set(url_list))
 
 #Build URLS for non url links (#, /path/, ...)
 #(list --> list)
