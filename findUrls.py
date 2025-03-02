@@ -102,6 +102,7 @@ def main():
 #(none)
 def printAllElementsOfList(table):
     temp = table.copy()
+    temp = list(set(temp))
     temp.sort()
     for el in temp:
         print(el)
@@ -111,6 +112,7 @@ def printAllElementsOfList(table):
 def writeURLStoFile(url_list):
     file = open(OUTPUT_PATH,'w+',encoding='utf-8')
     temp = url_list.copy()
+    temp = list(set(temp))
     temp.sort()
     for url in temp :
         file.write(url + '\n')
