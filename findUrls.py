@@ -1,5 +1,4 @@
 import requests
-from bs4 import BeautifulSoup
 from bs4.builder import XMLParsedAsHTMLWarning
 import warnings
 import sys
@@ -7,9 +6,11 @@ from urllib.parse import urlparse
 import urllib3
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+import re
 import time
 import os
 warnings.filterwarnings('ignore', category=XMLParsedAsHTMLWarning)
+from findJS import *
 
 for arg in sys.argv:
 	if arg.find("http:") != -1 or arg.find("https:") != -1:
@@ -130,28 +131,34 @@ def getNewURLS(url_list):
             if link.split("#")[0] not in FOUND_URLS :
                 result.append(link.split("#")[0])
     return result
-            
+
 #Return a list of the URLS found in a page (parsed from the HTTP response)
 #(str --> list)
 def getURLS(url):
     rheaders = {'User-agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'}
     try:
         r = requests.get(url,headers=rheaders,verify=False)
-        soup = BeautifulSoup(r.text, 'html.parser')
+        response = r.text
         result = []
-        for link in soup.find_all('a'):
-            result.append(link.get('href'))
-        for link in soup.find_all('link'):
-            result.append(link.get('href'))
+        for link in findPattern('href\=\"([^"]+)"',response):
+            result.append(link)
+        for link in findPattern("href\=\'([^']+)'",response):
+            result.append(link)
+        for link in findPattern('src\=\"([^"]+)"',response):
+            result.append(link)
+        for link in findPattern("src\=\'([^']+)'",response):
+            result.append(link)
     except Exception as e:
         print("[-] Error while requesting " + url)
+        print(str(e))
         result = []
     return result
 
 #Delete duplicates in a list 
 #(list --> list)
 def removeDuplicatesList(url_list) :
-    return list(set(url_list))
+    result = url_list.copy()
+    return list(set(result))
 
 #Build URLS for non url links (#, /path/, ...)
 #(list --> list)
@@ -160,7 +167,11 @@ def buildURLS(url_list):
     for link in url_list :
         if link is None or len(link) == 0 :
             pass
-        elif link[0] == "/" :
+        elif len(link) == 1 :
+            result.append(BASE_URL + link)
+        elif link[:2] == '//' :
+            result.append(urlparse(BASE_URL).scheme + ':' + link)
+        elif link[0] == '/' :
             result.append(urlparse(BASE_URL).scheme + '://' + urlparse(BASE_URL).netloc + link)
         elif link[0] == "#" or link[0] == "?" or link[0] == "@" or link[0] == ":" :
             result.append(BASE_URL + link)
