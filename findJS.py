@@ -52,6 +52,12 @@ def findURLinJS(content):
     #+'/api/event'
     FOUND['pattern12'] = findPattern("\+'(\/[^']+)'",JS_CONTENT)
 
+    #("http://example.com"
+    FOUND['pattern13'] = findPattern('\(\"(https?\:[^"]+)\"',JS_CONTENT)
+
+     #('http://example.com'
+    FOUND['pattern14'] = findPattern("\(\'(https?\:[^']+)\'",JS_CONTENT)
+    
     sub_result = []
     for key, value in FOUND.items():
         sub_result = sub_result + value
