@@ -152,6 +152,10 @@ def getURLS(url):
             result.append(link)
         for link in findPattern("action\=\'([^']+)'",response):
             result.append(link)
+	for link in findPattern('content\=\"([^"]+)"',response):
+            result.append(link)
+        for link in findPattern("content\=\'([^']+)'",response):
+            result.append(link)
     except Exception as e:
         print("[-] Error while requesting " + url)
         print(str(e))
