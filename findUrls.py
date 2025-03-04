@@ -1,5 +1,4 @@
 import requests
-from bs4.builder import XMLParsedAsHTMLWarning
 import warnings
 import sys
 from urllib.parse import urlparse
@@ -9,8 +8,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 import re
 import time
 import os
-warnings.filterwarnings('ignore', category=XMLParsedAsHTMLWarning)
-from findJS import *
+import validators
 
 for arg in sys.argv:
 	if arg.find("http:") != -1 or arg.find("https:") != -1:
@@ -49,7 +47,7 @@ def main():
 
     urls = getURLS(BASE_URL)
     urls = removeDuplicatesList(urls)
-    urls = buildURLS(urls)
+    urls = buildURLS(urls,BASE_URL)
     urls = excludeOtherDomainsURLS(urls,BASE_URL)
 
     FOUND_URLS = FOUND_URLS + urls
@@ -81,7 +79,7 @@ def main():
                     print(f'[+] Scanning url: {url}')
                     urls = getURLS(url)
                     urls = removeDuplicatesList(urls)
-                    urls = buildURLS(urls)
+                    urls = buildURLS(urls,url)
                     urls = excludeOtherDomainsURLS(urls,BASE_URL)
                     new_urls = getNewURLS(urls)
                     
@@ -140,22 +138,78 @@ def getURLS(url):
         r = requests.get(url,headers=rheaders,verify=False)
         response = r.text
         result = []
-        for link in findPattern('href\=\"([^"]+)"',response):
+
+        ### Search in HTML content
+
+        for link in findPattern('href\=\"([^"]+)"',response):  #href="http://example.com"
             result.append(link)
-        for link in findPattern("href\=\'([^']+)'",response):
+
+        for link in findPattern("href\=\'([^']+)'",response):  #href='http://example.com'
             result.append(link)
-        for link in findPattern('src\=\"([^"]+)"',response):
+
+        for link in findPattern('src\=\"([^"]+)"',response):  #src="http://example.com"
             result.append(link)
-        for link in findPattern("src\=\'([^']+)'",response):
+
+        for link in findPattern("src\=\'([^']+)'",response):  #src='http://example.com'
             result.append(link)
-        for link in findPattern('action\=\"([^"]+)"',response):
+
+        for link in findPattern('action\=\"([^"]+)"',response):  #action="http://example.com"
             result.append(link)
-        for link in findPattern("action\=\'([^']+)'",response):
+
+        for link in findPattern("action\=\'([^']+)'",response):  #action='http://example.com'
             result.append(link)
-        for link in findPattern('content\=\"([^"]+)"',response):
+
+        for link in findPattern('content\=\"([^"]+)"',response):  #content="http://example.com"
             result.append(link)
-        for link in findPattern("content\=\'([^']+)'",response):
+
+        for link in findPattern("content\=\'([^']+)'",response):  #content='http://example.com'
             result.append(link)
+        
+
+        ### Search in JS content
+
+        for link in findPattern('\:\s*"(http[^"]+)"',response): #:"http://example.com"
+            result.append(link)
+
+        for link in findPattern("\:\s*'(http[^']+)'",response): #:'http://example.com'
+            result.append(link)
+
+        for link in findPattern('\=\s*"(http[^"]+)"',response): #="http://example.com"
+            result.append(link)
+
+        for link in findPattern("\=\s*'(http[^']+)'",response): #='http://example.com'
+            result.append(link)
+
+        for link in findPattern('\+\s*"(http[^"]+)"',response): #+"http://example.com"
+            result.append(link)
+
+        for link in findPattern("\+\s*'(http[^']+)'",response): #+'http://example.com'
+            result.append(link)
+
+        for link in findPattern('\:"(\/[^"]+)"',response):      #:"/api/event"
+            result.append(link)
+
+        for link in findPattern("\:'(\/[^']+)'",response):      #:'/api/event'
+            result.append(link)
+
+        for link in findPattern('\="(\/[^"]+)"',response):    #="/api/event"
+            result.append(link)
+
+        for link in findPattern("\='(\/[^']+)'",response):    #='/api/event'
+            result.append(link)
+
+        for link in findPattern('\+"(\/[^"]+)"',response):    #+"/api/event"
+            result.append(link)
+
+        for link in findPattern("\+'(\/[^']+)'",response):    #+'/api/event'
+            result.append(link)
+
+        for link in findPattern('\(\"(https?\:[^"]+)\"',response):    #("http://example.com"
+            result.append(link)
+
+        for link in findPattern("\(\'(https?\:[^']+)\'",response):    #('http://example.com'
+            result.append(link)
+
     except Exception as e:
         print("[-] Error while requesting " + url)
         print(str(e))
@@ -169,23 +223,64 @@ def removeDuplicatesList(url_list) :
     return list(set(result))
 
 #Build URLS for non url links (#, /path/, ...)
-#(list --> list)
-def buildURLS(url_list):
+#(list,string --> list)
+def buildURLS(url_list,current_url):
     result = []
     for link in url_list :
-        if link is None or len(link) == 0 :
+        if link is None or len(link) == 0 or link == " ":
             pass
         elif len(link) == 1 :
-            result.append(BASE_URL + link)
+            new_url = current_url + "/" + link
+            if validators.url(new_url) :
+                result.append(new_url)
+            else:
+                print("Invalid URL found: " + new_url)
         elif link[:2] == '//' :
-            result.append(urlparse(BASE_URL).scheme + ':' + link)
+            new_url = urlparse(current_url).scheme + ':' + link
+            if validators.url(new_url) :
+                result.append(new_url)
+            else:
+                print("Invalid URL found: " + new_url)
+        elif link[:2] == './' :
+            new_path = os.path.dirname(urlparse(current_url).path) + link.replace('./','/',count=1)
+            new_url = urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + new_path
+            if validators.url(new_url) :
+                result.append(new_url)
+            else:
+                print("Invalid URL found: " + new_url)
         elif link[0] == '/' :
-            result.append(urlparse(BASE_URL).scheme + '://' + urlparse(BASE_URL).netloc + link)
+            new_url = urlparse(current_url).scheme + '://' + urlparse(BASE_URL).netloc + link
+            if validators.url(new_url) :
+                result.append(new_url)
+            else:
+                print("Invalid URL found: " + new_url)
         elif link[0] == "#" or link[0] == "?" or link[0] == "@" or link[0] == ":" :
-            result.append(BASE_URL + link)
+            new_url = BASE_URL + link
+            if validators.url(new_url) :
+                result.append(new_url)
+            else:
+                print("Invalid URL found: " + new_url)
+        elif link[:4] == 'http' :
+            if validators.url(link) :
+                result.append(link)
+            else:
+                print("Invalid URL found: " + link)
         else :
-            result.append(link)
+            if validators.url(link) :
+                result.append(link)
+            elif validators.url(current_url + '/' + link) :
+                result.append(current_url + '/' + link)
+            else:
+                print("Invalid URL found: " + link)
     return result
+
+#Return a list of all URLs that match the pattern
+#(string,string ---> list)
+def findPattern(pattern,content):
+    compiled = re.compile(r''+pattern+'')
+    urls = compiled.findall(content)
+    urls = list(set(urls))
+    return urls
 
 #Exlude URLS from other domains
 #(list --> list)
