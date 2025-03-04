@@ -210,6 +210,12 @@ def getURLS(url):
         for link in findPattern("\(\'(https?\:[^']+)\'",response):    #('http://example.com'
             result.append(link)
 
+        for link in findPattern('\s+\"([^"]+)\"',response):    # "http://example.com"
+            result.append(link)
+
+        for link in findPattern("\s+\'([^']+)\'",response):    # 'http://example.com'
+            result.append(link)
+
     except Exception as e:
         print("[-] Error while requesting " + url)
         print(str(e))
@@ -261,6 +267,7 @@ def buildURLS(url_list,current_url):
             else:
                 print("Invalid URL found: " + new_url)
         elif link[:4] == 'http' :
+            link = cleanJSUrl(link)
             if validators.url(link) :
                 result.append(link)
             else:
@@ -272,6 +279,18 @@ def buildURLS(url_list,current_url):
                 result.append(current_url + '/' + link)
             else:
                 print("Invalid URL found: " + link)
+    return result
+
+#Return a clean URL ('http://myexample.com' + '/file' -> http://myexample.com/file)
+#(string ---> string)
+def cleanJSUrl(url):
+    result = url
+    find1 = re.search("\'\s*\+\s*\'",result)
+    if find1 : #check if link found in JS: 'https://' + 'mydomain.com?example=1'
+        result = re.sub("\'\s*\+\s*\'",'',result)
+    find2 = re.search('\"\s*\+\s*\"',result)
+    if find2 : #check if link found in JS: "https://" + "mydomain.com?example=1"
+        result = re.sub('\"\s*\+\s*\"',result,'',result)
     return result
 
 #Return a list of all URLs that match the pattern
