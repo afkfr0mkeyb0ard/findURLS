@@ -148,11 +148,11 @@ def getURLS(url):
             result.append(link)
         for link in findPattern("src\=\'([^']+)'",response):
             result.append(link)
-	for link in findPattern('action\=\"([^"]+)"',response):
+        for link in findPattern('action\=\"([^"]+)"',response):
             result.append(link)
         for link in findPattern("action\=\'([^']+)'",response):
             result.append(link)
-	for link in findPattern('content\=\"([^"]+)"',response):
+        for link in findPattern('content\=\"([^"]+)"',response):
             result.append(link)
         for link in findPattern("content\=\'([^']+)'",response):
             result.append(link)
