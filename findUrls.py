@@ -141,79 +141,79 @@ def getURLS(url):
 
         ### Search in HTML content
 
-        for link in findPattern('href\=\"([^"]+)"',response):  #href="http://example.com"
+        for link in findPattern(r'href\=\"([^"]+)"',response):  #href="http://example.com"
             result.append(link)
 
-        for link in findPattern("href\=\'([^']+)'",response):  #href='http://example.com'
+        for link in findPattern(r"href\=\'([^']+)'",response):  #href='http://example.com'
             result.append(link)
 
-        for link in findPattern('src\=\"([^"]+)"',response):  #src="http://example.com"
+        for link in findPattern(r'src\=\"([^"]+)"',response):  #src="http://example.com"
             result.append(link)
 
-        for link in findPattern("src\=\'([^']+)'",response):  #src='http://example.com'
+        for link in findPattern(r"src\=\'([^']+)'",response):  #src='http://example.com'
             result.append(link)
 
-        for link in findPattern('action\=\"([^"]+)"',response):  #action="http://example.com"
+        for link in findPattern(r'action\=\"([^"]+)"',response):  #action="http://example.com"
             result.append(link)
 
-        for link in findPattern("action\=\'([^']+)'",response):  #action='http://example.com'
+        for link in findPattern(r"action\=\'([^']+)'",response):  #action='http://example.com'
             result.append(link)
 
-        for link in findPattern('content\=\"([^"]+)"',response):  #content="http://example.com"
+        for link in findPattern(r'content\=\"([^"]+)"',response):  #content="http://example.com"
             result.append(link)
 
-        for link in findPattern("content\=\'([^']+)'",response):  #content='http://example.com'
+        for link in findPattern(r"content\=\'([^']+)'",response):  #content='http://example.com'
             result.append(link)
         
 
         ### Search in JS content
 
-        for link in findPattern('\:\s*"(http[^"]+)"',response): #:"http://example.com"
+        for link in findPattern(r'\:\s*"(https?\:[^"]+)"',response): #:"http://example.com"
             result.append(link)
 
-        for link in findPattern("\:\s*'(http[^']+)'",response): #:'http://example.com'
+        for link in findPattern(r"\:\s*'(https?\:[^']+)'",response): #:'http://example.com'
             result.append(link)
 
-        for link in findPattern('\=\s*"(http[^"]+)"',response): #="http://example.com"
+        for link in findPattern(r'\=\s*"(https?\:[^"]+)"',response): #="http://example.com"
             result.append(link)
 
-        for link in findPattern("\=\s*'(http[^']+)'",response): #='http://example.com'
+        for link in findPattern(r"\=\s*'(https?\:[^']+)'",response): #='http://example.com'
             result.append(link)
 
-        for link in findPattern('\+\s*"(http[^"]+)"',response): #+"http://example.com"
+        for link in findPattern(r'\+\s*"(https?\:[^"]+)"',response): #+"http://example.com"
             result.append(link)
 
-        for link in findPattern("\+\s*'(http[^']+)'",response): #+'http://example.com'
+        for link in findPattern(r"\+\s*'(https?\:[^']+)'",response): #+'http://example.com'
             result.append(link)
 
-        for link in findPattern('\:"(\/[^"]+)"',response):      #:"/api/event"
+        for link in findPattern(r'\:\s*"(\/[^"]+)"',response):      #:"/api/event"
             result.append(link)
 
-        for link in findPattern("\:'(\/[^']+)'",response):      #:'/api/event'
+        for link in findPattern(r"\:\s*'(\/[^']+)'",response):      #:'/api/event'
             result.append(link)
 
-        for link in findPattern('\="(\/[^"]+)"',response):    #="/api/event"
+        for link in findPattern(r'\=\s*"(\/[^"]+)"',response):    #="/api/event"
             result.append(link)
 
-        for link in findPattern("\='(\/[^']+)'",response):    #='/api/event'
+        for link in findPattern(r"\=\s*'(\/[^']+)'",response):    #='/api/event'
             result.append(link)
 
-        for link in findPattern('\+"(\/[^"]+)"',response):    #+"/api/event"
+        for link in findPattern(r'\+\s*"(\/[^"]+)"',response):    #+"/api/event"
             result.append(link)
 
-        for link in findPattern("\+'(\/[^']+)'",response):    #+'/api/event'
+        for link in findPattern(r"\+\s*'(\/[^']+)'",response):    #+'/api/event'
             result.append(link)
 
-        for link in findPattern('\(\"(https?\:[^"]+)\"',response):    #("http://example.com"
+        for link in findPattern(r'\(\"(https?\:[^"]+)\"',response):    #("http://example.com"
             result.append(link)
 
-        for link in findPattern("\(\'(https?\:[^']+)\'",response):    #('http://example.com'
+        for link in findPattern(r"\(\'(https?\:[^']+)\'",response):    #('http://example.com'
             result.append(link)
 
-        for link in findPattern('\s+\"([^"]+)\"',response):    # "http://example.com"
+        for link in findPattern(r'\s+\"(https?\:[^"]+)\"',response):    # "http://example.com"
             result.append(link)
 
-        for link in findPattern("\s+\'([^']+)\'",response):    # 'http://example.com'
+        for link in findPattern(r"\s+\'(https?\:[^']+)\'",response):    # 'http://example.com'
             result.append(link)
 
     except Exception as e:
@@ -236,12 +236,15 @@ def buildURLS(url_list,current_url):
         if link is None or len(link) == 0 or link == " ":
             pass
         elif len(link) == 1 :
-            new_url = current_url + "/" + link
+            if link == '/' :
+            	new_url = urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + '/'
+            else:
+                new_url = urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + '/' + link
             if validators.url(new_url) :
                 result.append(new_url)
             else:
                 print("Invalid URL found: " + new_url)
-        elif link[:2] == '//' :
+        elif link[:2] == '//' and link[:3] != '///' :
             new_url = urlparse(current_url).scheme + ':' + link
             if validators.url(new_url) :
                 result.append(new_url)
@@ -261,7 +264,7 @@ def buildURLS(url_list,current_url):
             else:
                 print("Invalid URL found: " + new_url)
         elif link[0] == "#" or link[0] == "?" or link[0] == "@" or link[0] == ":" :
-            new_url = BASE_URL + link
+            new_url = current_url + link
             if validators.url(new_url) :
                 result.append(new_url)
             else:
@@ -272,25 +275,26 @@ def buildURLS(url_list,current_url):
                 result.append(link)
             else:
                 print("Invalid URL found: " + link)
-        else :
-            if validators.url(link) :
-                result.append(link)
-            elif validators.url(current_url + '/' + link) :
-                result.append(current_url + '/' + link)
-            else:
-                print("Invalid URL found: " + link)
+        elif validators.url(link) :
+            result.append(link)
+        elif validators.url(current_url + link) :
+            result.append(current_url + link)
+        elif validators.url(current_url + '/' + link) :
+            result.append(current_url + '/' + link)
+        else:
+            print("Invalid URL found: " + link)
     return result
 
 #Return a clean URL ('http://myexample.com' + '/file' -> http://myexample.com/file)
 #(string ---> string)
 def cleanJSUrl(url):
     result = url
-    find1 = re.search("\'\s*\+\s*\'",result)
+    find1 = re.search(r"\'\s*\+\s*\'",result)
     if find1 : #check if link found in JS: 'https://' + 'mydomain.com?example=1'
-        result = re.sub("\'\s*\+\s*\'",'',result)
-    find2 = re.search('\"\s*\+\s*\"',result)
+        result = re.sub(r"\'\s*\+\s*\'",'',result)
+    find2 = re.search(r'\"\s*\+\s*\"',result)
     if find2 : #check if link found in JS: "https://" + "mydomain.com?example=1"
-        result = re.sub('\"\s*\+\s*\"',result,'',result)
+        result = re.sub(r'\"\s*\+\s*\"',result,'',result)
     return result
 
 #Return a list of all URLs that match the pattern
