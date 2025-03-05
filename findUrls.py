@@ -159,10 +159,10 @@ def getURLS(url):
         for link in findPattern(r"action\=\'([^']+)'",response):  #action='http://example.com'
             result.append(link)
 
-        for link in findPattern(r'content\=\"([^"]+)"',response):  #content="http://example.com"
+        for link in findPattern(r'content\=\"(https?\:[^"]+)"',response):  #content="http://example.com"
             result.append(link)
 
-        for link in findPattern(r"content\=\'([^']+)'",response):  #content='http://example.com'
+        for link in findPattern(r"content\=\'(https?\:[^']+)'",response):  #content='http://example.com'
             result.append(link)
         
 
@@ -258,7 +258,7 @@ def buildURLS(url_list,current_url):
             else:
                 print("Invalid URL found: " + new_url)
         elif link[0] == '/' :
-            new_url = urlparse(current_url).scheme + '://' + urlparse(BASE_URL).netloc + link
+            new_url = urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + link
             if validators.url(new_url) :
                 result.append(new_url)
             else:
@@ -275,12 +275,14 @@ def buildURLS(url_list,current_url):
                 result.append(link)
             else:
                 print("Invalid URL found: " + link)
+        elif link[:11] == "javascript:" :
+            print("JavaScript found for URL: " + current_url + ':' + link)
         elif validators.url(link) :
             result.append(link)
-        elif validators.url(current_url + link) :
-            result.append(current_url + link)
-        elif validators.url(current_url + '/' + link) :
-            result.append(current_url + '/' + link)
+        elif validators.url(urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + urlparse(current_url).path + link) :
+            result.append(urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + urlparse(current_url).path + link)
+        elif validators.url(urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + urlparse(current_url).path + '/' + link) :
+            result.append(urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + urlparse(current_url).path + '/' + link)
         else:
             print("Invalid URL found: " + link)
     return result
