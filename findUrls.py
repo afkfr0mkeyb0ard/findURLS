@@ -83,14 +83,15 @@ def main():
             for url in FOUND_URLS :
                 if DELAY :
                     time.sleep(DELAY_time)
+                url = url.split('#')[0]
+                url_path = urlparse(url).path
                 if url not in DONE_URLS \
-                and (url.split(".")[-1] != 'png' \
-                and url.split(".")[-1] != 'css' \
-                and url.split(".")[-1] != 'svg' \
-                and url.split(".")[-1] != 'jpg' \
-                and url.split(".")[-1] != 'jpeg' \
-                and url.split(".")[-1] != 'ico') \
-                and url.find("#") == -1 \
+                and (url_path.split(".")[-1] != 'png' \
+                and url_path.split(".")[-1] != 'css' \
+                and url_path.split(".")[-1] != 'svg' \
+                and url_path.split(".")[-1] != 'jpg' \
+                and url_path.split(".")[-1] != 'jpeg' \
+                and url_path.split(".")[-1] != 'ico') \
                 and url.find(":javascript:") == -1 :
                     print('')
                     print(f'[+] Scanning url: {url}')
@@ -257,6 +258,8 @@ def getURLS(url):
         for link in findPattern(r"content\=\'(https?\:[^']+)'",response):  #content='http://example.com'
             result.append(link)
         
+        for link in findPattern(r"<loc>(https?[^<]+)<\/loc>",response):  #<loc>https://example.com</loc>
+            result.append(link)
 
         ### Search in JS content
 
@@ -316,35 +319,56 @@ def getURLS(url):
 
 #Delete duplicates in a list 
 #(list --> list)
-def removeDuplicatesList(url_list) :
+def removeDuplicatesList(url_list):
     result = url_list.copy()
     return list(set(result))
+
+#Build an URL from urlparse elements
+#(string,string,string,string,string,string -> string)
+def buildURL(scheme,netloc,path='',params='',query='',fragment=''):
+    url = scheme + "://" + netloc
+    if path != '' :
+        url = url + path
+    if params != '' :
+        url = url + ';' + params
+    if query != '' :
+        url = url + '?' + query
+    if fragment != '' :
+        url = url + '#' + fragment
+    return url
 
 #Build URLS for non url links (#, /path/, ...)
 #(list,string --> list)
 def buildURLS(url_list,current_url):
     result = []
     for link in url_list :
+        link = link.replace("&amp;","&")
+        built_scheme = urlparse(link).scheme if urlparse(link).scheme != '' else urlparse(current_url).scheme
+        built_netloc = urlparse(link).netloc if urlparse(link).netloc != '' else urlparse(current_url).netloc
+        built_path = urlparse(link).path
+        built_params = urlparse(link).params
+        built_query = urlparse(link).query
+        built_fragment = urlparse(link).fragment
         if link is None or len(link) == 0 or link == " ":
             pass
         elif len(link) == 1 :
             if link == '/' :
-            	new_url = urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + '/'
+                new_url = buildURL(scheme=built_scheme,netloc=built_netloc,path='/')
             else:
-                new_url = urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + '/' + link
+                new_url = buildURL(scheme=built_scheme,netloc=built_netloc,path='/' + link)
             if validators.url(new_url) :
                 result.append(new_url)
             else:
                 print("[-] Invalid URL found: " + new_url)
         elif link[:2] == '//' and link[:3] != '///' :
-            new_url = urlparse(current_url).scheme + ':' + link
+            new_url = buildURL(scheme=built_scheme,netloc=built_netloc,path=built_path,params=built_params,query=built_query,fragment=built_fragment)
             if validators.url(new_url) :
                 result.append(new_url)
             else:
                 print("[-] Invalid URL found: " + new_url)
         elif link[:2] == './' :
             new_path = os.path.dirname(urlparse(current_url).path) + link.replace('./','/',count=1)
-            new_url = urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + new_path
+            new_url = buildURL(scheme=built_scheme,netloc=built_netloc,path=new_path,params=built_params,query=built_query,fragment=built_fragment)
             if validators.url(new_url) :
                 result.append(new_url)
             else:
@@ -354,32 +378,41 @@ def buildURLS(url_list,current_url):
             if urlparse(current_url).hostname in split_link[1] :
                 print("[-] Invalid link found: " + link)
             else:
-                new_url = urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + link
+                new_url = buildURL(scheme=built_scheme,netloc=built_netloc,path=built_path,params=built_params,query=built_query,fragment=built_fragment)
                 if validators.url(new_url) :
                     result.append(new_url)
                 else:
                     print("[-] Invalid URL found: " + new_url)
         elif link[0] == "#" or link[0] == "?" or link[0] == "@" or link[0] == ":" :
-            new_url = current_url + link
+            new_url = buildURL(scheme=built_scheme,netloc=built_netloc,path=built_path,params=built_params,query=built_query,fragment=built_fragment)
             if validators.url(new_url) :
                 result.append(new_url)
             else:
                 print("[-] Invalid URL found: " + new_url)
         elif link[:4] == 'http' :
-            link = cleanJSUrl(link)
-            if validators.url(link) :
-                result.append(link)
+            new_link = cleanJSUrl(link)
+            built_scheme = urlparse(new_link).scheme
+            built_netloc = urlparse(new_link).netloc
+            built_path = urlparse(new_link).path
+            built_params = urlparse(new_link).params
+            built_query = urlparse(new_link).query
+            built_fragment = urlparse(new_link).fragment
+            new_url = buildURL(scheme=built_scheme,netloc=built_netloc,path=built_path,params=built_params,query=built_query,fragment=built_fragment)
+            if validators.url(new_url) :
+                result.append(new_url)
             else:
                 print("[-] Invalid URL found: " + link)
         elif link[:11] == "javascript:" :
             new_url = current_url + ':' + link
             result.append(new_url)
+        elif link[:10] == "data:image" :
+            pass
         elif validators.url(link) :
             result.append(link)
-        elif validators.url(urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + urlparse(current_url).path + link) :
-            result.append(urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + urlparse(current_url).path + link)
-        elif validators.url(urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + urlparse(current_url).path + '/' + link) :
-            result.append(urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + urlparse(current_url).path + '/' + link)
+        elif validators.url(buildURL(scheme=built_scheme,netloc=built_netloc,path=built_path,params=built_params,query=built_query,fragment=built_fragment)) :
+            result.append(buildURL(scheme=built_scheme,netloc=built_netloc,path=built_path,params=built_params,query=built_query,fragment=built_fragment))
+        elif validators.url(buildURL(scheme=built_scheme,netloc=built_netloc,path='/'+built_path,params=built_params,query=built_query,fragment=built_fragment)) :
+            result.append(buildURL(scheme=built_scheme,netloc=built_netloc,path='/'+built_path,params=built_params,query=built_query,fragment=built_fragment))
         else:
             print("[-] Invalid URL found: " + link)
     return result
@@ -412,13 +445,6 @@ def excludeOtherDomainsURLS(url_list,base_url):
         if urlparse(link).hostname == DOMAIN :
             result.append(link)
     return result
-
-def getDomain(url):
-    try:
-        return urlparse(url).netloc
-    except Exception as e:
-        print(e)
-        sys.exit()
 
 if __name__ == '__main__' :
     main()
