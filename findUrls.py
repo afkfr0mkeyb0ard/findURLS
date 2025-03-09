@@ -347,7 +347,7 @@ def buildURLS(url_list,current_url):
         built_netloc = urlparse(link).netloc if urlparse(link).netloc != '' else urlparse(current_url).netloc
         built_path = urlparse(link).path
         built_params = urlparse(link).params
-        built_query = urlparse(link).query
+        built_query = urlparse(link).query.replace(' ','%20')
         built_fragment = urlparse(link).fragment
         if link is None or len(link) == 0 or link == " ":
             pass
