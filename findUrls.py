@@ -10,33 +10,45 @@ import time
 import os
 import validators
 
+def exitAndHelp():
+    print('[-] Please enter a valid URL and check your parameters.')
+    print('Usage: python3 findUrls.py [-s] [-v] [-d 1] https://yourwebsite/')
+    print('       -s       Enable Spider mode. Will repeat the scan for every new URL found')
+    print('       -v       Enable Verbose mode. To display all found URLs')
+    print('       -d       Define the delay between two requests (seconds)')
+    sys.exit()
+
 for arg in sys.argv:
 	if arg.find("http:") != -1 or arg.find("https:") != -1:
 		BASE_URL = arg
 
-def exitAndHelp():
-    print('[-] Please enter a valid URL')
-    print('Usage: python3 findUrls.py [-s] [-v] https://yourwebsite/')
-    print('       -s       Enable Spider mode. Will repeat the scan for every new URL found')
-    print('       -v       Enable Verbose mode. To display all found URLs')
-    sys.exit()
-    
+SPIDER = '-s' in sys.argv
+VERBOSE = '-v' in sys.argv
+DELAY = '-d' in sys.argv
+
 try:
-	url_check = urlparse(BASE_URL)
+    url_check = urlparse(BASE_URL)
+    if DELAY :
+        DELAY_time = int(sys.argv[sys.argv.index('-d') + 1])
 except Exception as e:
 	exitAndHelp()
 
 if url_check.scheme == '' or url_check.netloc == '' :
     exitAndHelp()
 
+if SPIDER:
+    print("[i] Using spidering mode (-s)")
+if VERBOSE:
+    print("[i] Using verbose mode (-v)")
+if DELAY:
+    print("[i] Using delay (" + str(DELAY_time) + " second)")
+
 print(f'[+] Scanning url: {BASE_URL}')
 print('')
 print('-----------------------------------------------------------')
-DOMAIN = url_check.netloc
+DOMAIN = url_check.hostname
 FOUND_URLS = []
 DONE_URLS = []
-SPIDER = '-s' in sys.argv
-VERBOSE = '-v' in sys.argv
 
 CURRENT_DIR = os.getcwd()
 timestamp = str(time.time()).split(".")[0]
@@ -53,20 +65,24 @@ def main():
     FOUND_URLS = FOUND_URLS + urls
     
     writeURLStoFile(FOUND_URLS)
-    if VERBOSE:
-    	printAllElementsOfList(FOUND_URLS)
     
     DONE_URLS.append(BASE_URL)
     
     if len(FOUND_URLS) == 0 :
         print('[-] No new URL found, try another URL')
         sys.exit()
+    else:
+        print('[+] New URL found: ' + str(len(FOUND_URLS)))
+        if VERBOSE:
+            printAllElementsOfList(FOUND_URLS)
 
     newurlsfound = True
     if SPIDER :                                             #if Spider mode activated
         while newurlsfound :                                #while we find new URLS
             newurlsfound = False
             for url in FOUND_URLS :
+                if DELAY :
+                    time.sleep(DELAY_time)
                 if url not in DONE_URLS \
                 and (url.split(".")[-1] != 'png' \
                 and url.split(".")[-1] != 'css' \
@@ -74,7 +90,8 @@ def main():
                 and url.split(".")[-1] != 'jpg' \
                 and url.split(".")[-1] != 'jpeg' \
                 and url.split(".")[-1] != 'ico') \
-                and url.find("#") == -1 :
+                and url.find("#") == -1 \
+                and url.find(":javascript:") == -1 :
                     print('')
                     print(f'[+] Scanning url: {url}')
                     urls = getURLS(url)
@@ -88,8 +105,11 @@ def main():
                         for new_url in new_urls:
                             FOUND_URLS.append(new_url)
                         writeURLStoFile(FOUND_URLS)             # to save already discovered urls
+                        print('[+] New URL found: ' + str(len(new_urls)))
                         if VERBOSE:
                             printAllElementsOfList(new_urls)
+                    else:
+                        print('[-] No new URL found, trying next one.')
                     DONE_URLS.append(url)
 
         writeURLStoFile(FOUND_URLS) # Writting urls into a file
@@ -98,7 +118,7 @@ def main():
         print('')
 
 #Print all elements of a list (one per line)
-#(none)
+#(list -> none)
 def printAllElementsOfList(table):
     temp = table.copy()
     temp = list(set(temp))
@@ -107,7 +127,7 @@ def printAllElementsOfList(table):
         print(el)
 
 #Write URLS into a file
-#(none)
+#(list -> none)
 def writeURLStoFile(url_list):
     file = open(OUTPUT_PATH,'w+',encoding='utf-8')
     temp = url_list.copy()
@@ -157,6 +177,78 @@ def getURLS(url):
             result.append(link)
 
         for link in findPattern(r"action\=\'([^']+)'",response):  #action='http://example.com'
+            result.append(link)
+
+        for link in findPattern(r"codebase\=\'([^']+)'",response):  #codebase='http://example.com'
+            result.append(link)
+
+        for link in findPattern(r'codebase\=\"([^"]+)"',response):  #codebase="http://example.com"
+            result.append(link)
+
+        for link in findPattern(r"cite\=\'([^']+)'",response):  #cite='http://example.com'
+            result.append(link)
+
+        for link in findPattern(r'cite\=\"([^"]+)"',response):  #cite="http://example.com"
+            result.append(link)
+
+        for link in findPattern(r"background\=\'([^']+)'",response):  #background='http://example.com'
+            result.append(link)
+
+        for link in findPattern(r'background\=\"([^"]+)"',response):  #background="http://example.com"
+            result.append(link)
+
+        for link in findPattern(r"longdesc\=\'([^']+)'",response):  #longdesc='http://example.com'
+            result.append(link)
+
+        for link in findPattern(r'longdesc\=\"([^"]+)"',response):  #longdesc="http://example.com"
+            result.append(link)
+
+        for link in findPattern(r"profile\=\'([^']+)'",response):  #profile='http://example.com'
+            result.append(link)
+
+        for link in findPattern(r'profile\=\"([^"]+)"',response):  #profile="http://example.com"
+            result.append(link)
+
+        for link in findPattern(r"classid\=\'([^']+)'",response):  #classid='http://example.com'
+            result.append(link)
+
+        for link in findPattern(r'classid\=\"([^"]+)"',response):  #classid="http://example.com"
+            result.append(link)
+
+        for link in findPattern(r"data\=\'([^']+)'",response):  #data='http://example.com'
+            result.append(link)
+
+        for link in findPattern(r'data\=\"([^"]+)"',response):  #data="http://example.com"
+            result.append(link)
+
+        for link in findPattern(r"formaction\=\'([^']+)'",response):  #formaction='http://example.com'
+            result.append(link)
+
+        for link in findPattern(r'formaction\=\"([^"]+)"',response):  #formaction="http://example.com"
+            result.append(link)
+
+        for link in findPattern(r"icon\=\'([^']+)'",response):  #icon='http://example.com'
+            result.append(link)
+
+        for link in findPattern(r'icon\=\"([^"]+)"',response):  #icon="http://example.com"
+            result.append(link)
+
+        for link in findPattern(r"manifest\=\'([^']+)'",response):  #manifest='http://example.com'
+            result.append(link)
+
+        for link in findPattern(r'manifest\=\"([^"]+)"',response):  #manifest="http://example.com"
+            result.append(link)
+
+        for link in findPattern(r"poster\=\'([^']+)'",response):  #poster='http://example.com'
+            result.append(link)
+
+        for link in findPattern(r'poster\=\"([^"]+)"',response):  #poster="http://example.com"
+            result.append(link)
+
+        for link in findPattern(r"archive\=\'([^']+)'",response):  #archive='http://example.com'
+            result.append(link)
+
+        for link in findPattern(r'archive\=\"([^"]+)"',response):  #archive="http://example.com"
             result.append(link)
 
         for link in findPattern(r'content\=\"(https?\:[^"]+)"',response):  #content="http://example.com"
@@ -243,40 +335,45 @@ def buildURLS(url_list,current_url):
             if validators.url(new_url) :
                 result.append(new_url)
             else:
-                print("Invalid URL found: " + new_url)
+                print("[-] Invalid URL found: " + new_url)
         elif link[:2] == '//' and link[:3] != '///' :
             new_url = urlparse(current_url).scheme + ':' + link
             if validators.url(new_url) :
                 result.append(new_url)
             else:
-                print("Invalid URL found: " + new_url)
+                print("[-] Invalid URL found: " + new_url)
         elif link[:2] == './' :
             new_path = os.path.dirname(urlparse(current_url).path) + link.replace('./','/',count=1)
             new_url = urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + new_path
             if validators.url(new_url) :
                 result.append(new_url)
             else:
-                print("Invalid URL found: " + new_url)
+                print("[-] Invalid URL found: " + new_url)
         elif link[0] == '/' :
-            new_url = urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + link
-            if validators.url(new_url) :
-                result.append(new_url)
+            split_link = link.split('/')
+            if urlparse(current_url).hostname in split_link[1] :
+                print("[-] Invalid link found: " + link)
             else:
-                print("Invalid URL found: " + new_url)
+                new_url = urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + link
+                if validators.url(new_url) :
+                    result.append(new_url)
+                else:
+                    print("[-] Invalid URL found: " + new_url)
         elif link[0] == "#" or link[0] == "?" or link[0] == "@" or link[0] == ":" :
             new_url = current_url + link
             if validators.url(new_url) :
                 result.append(new_url)
             else:
-                print("Invalid URL found: " + new_url)
+                print("[-] Invalid URL found: " + new_url)
         elif link[:4] == 'http' :
             link = cleanJSUrl(link)
             if validators.url(link) :
                 result.append(link)
             else:
-                print("Invalid URL found: " + link)
+                print("[-] Invalid URL found: " + link)
         elif link[:11] == "javascript:" :
-            print("JavaScript found for URL: " + current_url + ':' + link)
+            new_url = current_url + ':' + link
+            result.append(new_url)
         elif validators.url(link) :
             result.append(link)
         elif validators.url(urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + urlparse(current_url).path + link) :
@@ -284,7 +381,7 @@ def buildURLS(url_list,current_url):
         elif validators.url(urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + urlparse(current_url).path + '/' + link) :
             result.append(urlparse(current_url).scheme + '://' + urlparse(current_url).netloc + urlparse(current_url).path + '/' + link)
         else:
-            print("Invalid URL found: " + link)
+            print("[-] Invalid URL found: " + link)
     return result
 
 #Return a clean URL ('http://myexample.com' + '/file' -> http://myexample.com/file)
@@ -312,7 +409,7 @@ def findPattern(pattern,content):
 def excludeOtherDomainsURLS(url_list,base_url):
     result = []
     for link in url_list :
-        if urlparse(link).netloc == DOMAIN :
+        if urlparse(link).hostname == DOMAIN :
             result.append(link)
     return result
 
