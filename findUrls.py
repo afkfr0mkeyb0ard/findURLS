@@ -19,8 +19,8 @@ def exitAndHelp():
     sys.exit()
 
 for arg in sys.argv:
-	if arg.find("http:") != -1 or arg.find("https:") != -1:
-		BASE_URL = arg
+    if arg.find("http:") != -1 or arg.find("https:") != -1:
+        BASE_URL = arg
 
 SPIDER = '-s' in sys.argv
 VERBOSE = '-v' in sys.argv
@@ -31,7 +31,7 @@ try:
     if DELAY :
         DELAY_time = int(sys.argv[sys.argv.index('-d') + 1])
 except Exception as e:
-	exitAndHelp()
+    exitAndHelp()
 
 if url_check.scheme == '' or url_check.netloc == '' :
     exitAndHelp()
@@ -49,10 +49,15 @@ print('-----------------------------------------------------------')
 DOMAIN = url_check.hostname
 FOUND_URLS = []
 DONE_URLS = []
+FOUND_POTENTIAL_PATHS = []
 
 CURRENT_DIR = os.getcwd()
 timestamp = str(time.time()).split(".")[0]
-OUTPUT_PATH = CURRENT_DIR + '/findUrls_result_' + timestamp + '_' + DOMAIN + '.txt'
+OUTPUT_FOLDER = CURRENT_DIR + '/' + DOMAIN
+if not os.path.exists(OUTPUT_FOLDER):
+    os.makedirs(OUTPUT_FOLDER)
+OUTPUT_FILE_URLS = OUTPUT_FOLDER + '/urls_' + timestamp + '_' + DOMAIN + '.txt'
+OUTPUT_FILE_PATHS = OUTPUT_FOLDER + '/potential_paths_' + timestamp + '_' + DOMAIN + '.txt'
 
 def main():
     global FOUND_URLS,DONE_URLS
@@ -65,6 +70,7 @@ def main():
     FOUND_URLS = FOUND_URLS + urls
     
     writeURLStoFile(FOUND_URLS)
+    writePathstoFile(FOUND_POTENTIAL_PATHS)
     
     DONE_URLS.append(BASE_URL)
     
@@ -102,7 +108,7 @@ def main():
                     new_urls = getNewURLS(urls)
                     
                     if len(new_urls) != 0 :
-                        newurlsfound = True 	                  # to continue spidering
+                        newurlsfound = True                       # to continue spidering
                         for new_url in new_urls:
                             FOUND_URLS.append(new_url)
                         writeURLStoFile(FOUND_URLS)             # to save already discovered urls
@@ -114,8 +120,9 @@ def main():
                     DONE_URLS.append(url)
 
         writeURLStoFile(FOUND_URLS) # Writting urls into a file
+        writePathstoFile(FOUND_POTENTIAL_PATHS) # Writting other potential paths into a file
         print('')
-        print(f'[+] File written to {OUTPUT_PATH}')
+        print(f'[+] File written to {OUTPUT_FILE_URLS}')
         print('')
 
 #Print all elements of a list (one per line)
@@ -127,10 +134,21 @@ def printAllElementsOfList(table):
     for el in temp:
         print(el)
 
+#Write potential paths into a file
+#(list -> none)
+def writePathstoFile(path_list):
+    file = open(OUTPUT_FILE_PATHS,'w+',encoding='utf-8')
+    temp = path_list.copy()
+    temp = list(set(temp))
+    temp.sort()
+    for path in temp :
+        file.write(path + '\n')
+    file.close()
+
 #Write URLS into a file
 #(list -> none)
 def writeURLStoFile(url_list):
-    file = open(OUTPUT_PATH,'w+',encoding='utf-8')
+    file = open(OUTPUT_FILE_URLS,'w+',encoding='utf-8')
     temp = url_list.copy()
     temp = list(set(temp))
     temp.sort()
@@ -311,10 +329,10 @@ def getURLS(url):
         for link in findPattern(r"\s+\'(https?\:[^']+)\'",response):    # 'http://example.com'
             result.append(link)
 
-        for link in findPattern(r'\"(\/[^\s\"]+)\"',response):    # "/users/me"
+        for link in findPattern(r'\"(\/[^\s\;\"]+)\"',response):    # "/users/me"
             result.append(link)
 
-        for link in findPattern(r"\'(\/[^\s\']+)\'",response):    # '/users/me'
+        for link in findPattern(r"\'(\/[^\s\;\']+)\'",response):    # '/users/me'
             result.append(link)
 
     except Exception as e:
@@ -346,6 +364,7 @@ def buildURL(scheme,netloc,path='',params='',query='',fragment=''):
 #Build URLS for non url links (#, /path/, ...)
 #(list,string --> list)
 def buildURLS(url_list,current_url):
+    global FOUND_POTENTIAL_PATHS
     result = []
     for link in url_list :
         link = link.replace("&amp;","&")
@@ -388,7 +407,9 @@ def buildURLS(url_list,current_url):
                 if validators.url(new_url) :
                     result.append(new_url)
                 else:
-                    print("[-] Invalid URL found: " + new_url)
+                    print("[?] Potential path found " + link)
+                    if link not in FOUND_POTENTIAL_PATHS:
+                        FOUND_POTENTIAL_PATHS.append(link)
         elif link[0] == "#" or link[0] == "?" or link[0] == "@" or link[0] == ":" :
             new_url = buildURL(scheme=built_scheme,netloc=built_netloc,path=built_path,params=built_params,query=built_query,fragment=built_fragment)
             if validators.url(new_url) :
