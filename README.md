@@ -13,5 +13,5 @@ Python script to find URLs from a web page and spidering a website
 [+] Find URLs in all pages (HTML, JS, ...)
 [+] Find potential API paths
 [+] Find IP addresses
-[+] Save results to files
+[+] Save all findings to files
 ```
