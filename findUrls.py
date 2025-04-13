@@ -311,6 +311,12 @@ def getURLS(url):
         for link in findPattern(r"\s+\'(https?\:[^']+)\'",response):    # 'http://example.com'
             result.append(link)
 
+        for link in findPattern(r'\"(\/[^\s\"]+)\"',response):    # "/users/me"
+            result.append(link)
+
+        for link in findPattern(r"\'(\/[^\s\']+)\'",response):    # "/users/me"
+            result.append(link)
+
     except Exception as e:
         print("[-] Error while requesting " + url)
         print(str(e))
