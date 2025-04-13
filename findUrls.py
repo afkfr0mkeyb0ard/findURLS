@@ -314,7 +314,7 @@ def getURLS(url):
         for link in findPattern(r'\"(\/[^\s\"]+)\"',response):    # "/users/me"
             result.append(link)
 
-        for link in findPattern(r"\'(\/[^\s\']+)\'",response):    # "/users/me"
+        for link in findPattern(r"\'(\/[^\s\']+)\'",response):    # '/users/me'
             result.append(link)
 
     except Exception as e:
