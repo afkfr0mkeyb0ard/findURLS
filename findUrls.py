@@ -50,6 +50,7 @@ DOMAIN = url_check.hostname
 FOUND_URLS = []
 DONE_URLS = []
 FOUND_POTENTIAL_PATHS = []
+FOUND_IPS = []
 
 CURRENT_DIR = os.getcwd()
 timestamp = str(time.time()).split(".")[0]
@@ -58,17 +59,19 @@ if not os.path.exists(OUTPUT_FOLDER):
     os.makedirs(OUTPUT_FOLDER)
 OUTPUT_FILE_URLS = OUTPUT_FOLDER + '/urls_' + timestamp + '_' + DOMAIN + '.txt'
 OUTPUT_FILE_PATHS = OUTPUT_FOLDER + '/potential_paths_' + timestamp + '_' + DOMAIN + '.txt'
+OUTPUT_FILE_IPS = OUTPUT_FOLDER + '/ips_' + timestamp + '_' + DOMAIN + '.txt'
 
 def main():
-    global FOUND_URLS,DONE_URLS
+    global FOUND_URLS,DONE_URLS,FOUND_IPS,FOUND_POTENTIAL_PATHS
 
-    urls = getURLS(BASE_URL)
+    content = makeRequest(BASE_URL)
+    urls = getURLS(content)
     urls = removeDuplicatesList(urls)
     urls = buildURLS(urls,BASE_URL)
     urls = excludeOtherDomainsURLS(urls,BASE_URL)
 
     FOUND_URLS = FOUND_URLS + urls
-    
+
     writeURLStoFile(FOUND_URLS)
     writePathstoFile(FOUND_POTENTIAL_PATHS)
     
@@ -81,6 +84,13 @@ def main():
         print('[+] New URL found: ' + str(len(FOUND_URLS)))
         if VERBOSE:
             printAllElementsOfList(FOUND_URLS)
+
+    ips = getIPS(content)
+    if len(ips) != 0:
+        for ip in ips:
+            print('[+] New IP found: ' + str(ip))
+            FOUND_IPS.append(str(ip))
+        writeIPStoFile(FOUND_IPS)
 
     newurlsfound = True
     if SPIDER :                                             #if Spider mode activated
@@ -101,7 +111,8 @@ def main():
                 and url.find(":javascript:") == -1 :
                     print('')
                     print(f'[+] Scanning url: {url}')
-                    urls = getURLS(url)
+                    content = makeRequest(url)
+                    urls = getURLS(content)
                     urls = removeDuplicatesList(urls)
                     urls = buildURLS(urls,url)
                     urls = excludeOtherDomainsURLS(urls,BASE_URL)
@@ -118,12 +129,33 @@ def main():
                     else:
                         print('[-] No new URL found, trying next one.')
                     DONE_URLS.append(url)
+                    
+                    #Writing found IPS to file
+                    ips = getIPS(content)
+                    if len(ips) != 0:
+                        for ip in ips:
+                            print('[+] New IP found: ' + str(ip))
+                            FOUND_IPS.append(str(ip))
+                        writeIPStoFile(FOUND_IPS)
 
         writeURLStoFile(FOUND_URLS) # Writting urls into a file
         writePathstoFile(FOUND_POTENTIAL_PATHS) # Writting other potential paths into a file
         print('')
         print(f'[+] File written to {OUTPUT_FILE_URLS}')
         print('')
+
+#Make an HTTP request and returns the page content
+#(string -> string)
+def makeRequest(url):
+    rheaders = {'User-agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'}
+    try:
+        r = requests.get(url,headers=rheaders,verify=False)
+        response = r.text
+        return response
+    except Exception as e:
+        print("[-] Error while requesting " + url)
+        print(str(e))
+        return None
 
 #Print all elements of a list (one per line)
 #(list -> none)
@@ -133,6 +165,17 @@ def printAllElementsOfList(table):
     temp.sort()
     for el in temp:
         print(el)
+
+#Write IPS into a file
+#(dic -> none)
+def writeIPStoFile(ips_list):
+    file = open(OUTPUT_FILE_IPS,'w+',encoding='utf-8')
+    temp = ips_list.copy()
+    temp = list(set(temp))
+    temp.sort()
+    for ip in temp :
+        file.write(ip + '\n')
+    file.close()
 
 #Write potential paths into a file
 #(list -> none)
@@ -171,174 +214,174 @@ def getNewURLS(url_list):
 
 #Return a list of the URLS found in a page (parsed from the HTTP response)
 #(str --> list)
-def getURLS(url):
-    rheaders = {'User-agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'}
-    try:
-        r = requests.get(url,headers=rheaders,verify=False)
-        response = r.text
-        result = []
+def getURLS(content):
+    result = []
 
-        ### Search in HTML content
+    ### Search in HTML content
+    for link in findPattern(r'href\=\"([^"]+)"',content):  #href="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'href\=\"([^"]+)"',response):  #href="http://example.com"
-            result.append(link)
+    for link in findPattern(r"href\=\'([^']+)'",content):  #href='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"href\=\'([^']+)'",response):  #href='http://example.com'
-            result.append(link)
+    for link in findPattern(r'src\=\"([^"]+)"',content):  #src="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'src\=\"([^"]+)"',response):  #src="http://example.com"
-            result.append(link)
+    for link in findPattern(r"src\=\'([^']+)'",content):  #src='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"src\=\'([^']+)'",response):  #src='http://example.com'
-            result.append(link)
+    for link in findPattern(r'action\=\"([^"]+)"',content):  #action="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'action\=\"([^"]+)"',response):  #action="http://example.com"
-            result.append(link)
+    for link in findPattern(r"action\=\'([^']+)'",content):  #action='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"action\=\'([^']+)'",response):  #action='http://example.com'
-            result.append(link)
+    for link in findPattern(r"codebase\=\'([^']+)'",content):  #codebase='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"codebase\=\'([^']+)'",response):  #codebase='http://example.com'
-            result.append(link)
+    for link in findPattern(r'codebase\=\"([^"]+)"',content):  #codebase="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'codebase\=\"([^"]+)"',response):  #codebase="http://example.com"
-            result.append(link)
+    for link in findPattern(r"cite\=\'([^']+)'",content):  #cite='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"cite\=\'([^']+)'",response):  #cite='http://example.com'
-            result.append(link)
+    for link in findPattern(r'cite\=\"([^"]+)"',content):  #cite="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'cite\=\"([^"]+)"',response):  #cite="http://example.com"
-            result.append(link)
+    for link in findPattern(r"background\=\'([^']+)'",content):  #background='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"background\=\'([^']+)'",response):  #background='http://example.com'
-            result.append(link)
+    for link in findPattern(r'background\=\"([^"]+)"',content):  #background="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'background\=\"([^"]+)"',response):  #background="http://example.com"
-            result.append(link)
+    for link in findPattern(r"longdesc\=\'([^']+)'",content):  #longdesc='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"longdesc\=\'([^']+)'",response):  #longdesc='http://example.com'
-            result.append(link)
+    for link in findPattern(r'longdesc\=\"([^"]+)"',content):  #longdesc="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'longdesc\=\"([^"]+)"',response):  #longdesc="http://example.com"
-            result.append(link)
+    for link in findPattern(r"profile\=\'([^']+)'",content):  #profile='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"profile\=\'([^']+)'",response):  #profile='http://example.com'
-            result.append(link)
+    for link in findPattern(r'profile\=\"([^"]+)"',content):  #profile="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'profile\=\"([^"]+)"',response):  #profile="http://example.com"
-            result.append(link)
+    for link in findPattern(r"classid\=\'([^']+)'",content):  #classid='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"classid\=\'([^']+)'",response):  #classid='http://example.com'
-            result.append(link)
+    for link in findPattern(r'classid\=\"([^"]+)"',content):  #classid="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'classid\=\"([^"]+)"',response):  #classid="http://example.com"
-            result.append(link)
+    for link in findPattern(r"data\=\'([^']+)'",content):  #data='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"data\=\'([^']+)'",response):  #data='http://example.com'
-            result.append(link)
+    for link in findPattern(r'data\=\"([^"]+)"',content):  #data="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'data\=\"([^"]+)"',response):  #data="http://example.com"
-            result.append(link)
+    for link in findPattern(r"formaction\=\'([^']+)'",content):  #formaction='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"formaction\=\'([^']+)'",response):  #formaction='http://example.com'
-            result.append(link)
+    for link in findPattern(r'formaction\=\"([^"]+)"',content):  #formaction="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'formaction\=\"([^"]+)"',response):  #formaction="http://example.com"
-            result.append(link)
+    for link in findPattern(r"icon\=\'([^']+)'",content):  #icon='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"icon\=\'([^']+)'",response):  #icon='http://example.com'
-            result.append(link)
+    for link in findPattern(r'icon\=\"([^"]+)"',content):  #icon="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'icon\=\"([^"]+)"',response):  #icon="http://example.com"
-            result.append(link)
+    for link in findPattern(r"manifest\=\'([^']+)'",content):  #manifest='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"manifest\=\'([^']+)'",response):  #manifest='http://example.com'
-            result.append(link)
+    for link in findPattern(r'manifest\=\"([^"]+)"',content):  #manifest="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'manifest\=\"([^"]+)"',response):  #manifest="http://example.com"
-            result.append(link)
+    for link in findPattern(r"poster\=\'([^']+)'",content):  #poster='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"poster\=\'([^']+)'",response):  #poster='http://example.com'
-            result.append(link)
+    for link in findPattern(r'poster\=\"([^"]+)"',content):  #poster="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'poster\=\"([^"]+)"',response):  #poster="http://example.com"
-            result.append(link)
+    for link in findPattern(r"archive\=\'([^']+)'",content):  #archive='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"archive\=\'([^']+)'",response):  #archive='http://example.com'
-            result.append(link)
+    for link in findPattern(r'archive\=\"([^"]+)"',content):  #archive="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'archive\=\"([^"]+)"',response):  #archive="http://example.com"
-            result.append(link)
+    for link in findPattern(r'content\=\"(https?\:[^"]+)"',content):  #content="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'content\=\"(https?\:[^"]+)"',response):  #content="http://example.com"
-            result.append(link)
+    for link in findPattern(r"content\=\'(https?\:[^']+)'",content):  #content='http://example.com'
+        result.append(link)
+    
+    for link in findPattern(r"<loc>(https?[^<]+)<\/loc>",content):  #<loc>https://example.com</loc>
+        result.append(link)
 
-        for link in findPattern(r"content\=\'(https?\:[^']+)'",response):  #content='http://example.com'
-            result.append(link)
-        
-        for link in findPattern(r"<loc>(https?[^<]+)<\/loc>",response):  #<loc>https://example.com</loc>
-            result.append(link)
+    ### Search in JS content
 
-        ### Search in JS content
+    for link in findPattern(r'\:\s*"(https?\:[^"]+)"',content): #:"http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'\:\s*"(https?\:[^"]+)"',response): #:"http://example.com"
-            result.append(link)
+    for link in findPattern(r"\:\s*'(https?\:[^']+)'",content): #:'http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"\:\s*'(https?\:[^']+)'",response): #:'http://example.com'
-            result.append(link)
+    for link in findPattern(r'\=\s*"(https?\:[^"]+)"',content): #="http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'\=\s*"(https?\:[^"]+)"',response): #="http://example.com"
-            result.append(link)
+    for link in findPattern(r"\=\s*'(https?\:[^']+)'",content): #='http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"\=\s*'(https?\:[^']+)'",response): #='http://example.com'
-            result.append(link)
+    for link in findPattern(r'\+\s*"(https?\:[^"]+)"',content): #+"http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'\+\s*"(https?\:[^"]+)"',response): #+"http://example.com"
-            result.append(link)
+    for link in findPattern(r"\+\s*'(https?\:[^']+)'",content): #+'http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"\+\s*'(https?\:[^']+)'",response): #+'http://example.com'
-            result.append(link)
+    for link in findPattern(r'\:\s*"(\/[^"]+)"',content):      #:"/api/event"
+        result.append(link)
 
-        for link in findPattern(r'\:\s*"(\/[^"]+)"',response):      #:"/api/event"
-            result.append(link)
+    for link in findPattern(r"\:\s*'(\/[^']+)'",content):      #:'/api/event'
+        result.append(link)
 
-        for link in findPattern(r"\:\s*'(\/[^']+)'",response):      #:'/api/event'
-            result.append(link)
+    for link in findPattern(r'\=\s*"(\/[^"]+)"',content):    #="/api/event"
+        result.append(link)
 
-        for link in findPattern(r'\=\s*"(\/[^"]+)"',response):    #="/api/event"
-            result.append(link)
+    for link in findPattern(r"\=\s*'(\/[^']+)'",content):    #='/api/event'
+        result.append(link)
 
-        for link in findPattern(r"\=\s*'(\/[^']+)'",response):    #='/api/event'
-            result.append(link)
+    for link in findPattern(r'\+\s*"(\/[^"]+)"',content):    #+"/api/event"
+        result.append(link)
 
-        for link in findPattern(r'\+\s*"(\/[^"]+)"',response):    #+"/api/event"
-            result.append(link)
+    for link in findPattern(r"\+\s*'(\/[^']+)'",content):    #+'/api/event'
+        result.append(link)
 
-        for link in findPattern(r"\+\s*'(\/[^']+)'",response):    #+'/api/event'
-            result.append(link)
+    for link in findPattern(r'\(\"(https?\:[^"]+)\"',content):    #("http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'\(\"(https?\:[^"]+)\"',response):    #("http://example.com"
-            result.append(link)
+    for link in findPattern(r"\(\'(https?\:[^']+)\'",content):    #('http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"\(\'(https?\:[^']+)\'",response):    #('http://example.com'
-            result.append(link)
+    for link in findPattern(r'\s+\"(https?\:[^"]+)\"',content):    # "http://example.com"
+        result.append(link)
 
-        for link in findPattern(r'\s+\"(https?\:[^"]+)\"',response):    # "http://example.com"
-            result.append(link)
+    for link in findPattern(r"\s+\'(https?\:[^']+)\'",content):    # 'http://example.com'
+        result.append(link)
 
-        for link in findPattern(r"\s+\'(https?\:[^']+)\'",response):    # 'http://example.com'
-            result.append(link)
+    for link in findPattern(r'\"(\/[^\s\;\"]+)\"',content):    # "/users/me"
+        result.append(link)
 
-        for link in findPattern(r'\"(\/[^\s\;\"]+)\"',response):    # "/users/me"
-            result.append(link)
+    for link in findPattern(r"\'(\/[^\s\;\']+)\'",content):    # '/users/me'
+        result.append(link)
 
-        for link in findPattern(r"\'(\/[^\s\;\']+)\'",response):    # '/users/me'
-            result.append(link)
+    return result
 
-    except Exception as e:
-        print("[-] Error while requesting " + url)
-        print(str(e))
-        result = []
+#Return a list of the IP found in a page (parsed from the HTTP response)
+#(str --> list)
+def getIPS(content):
+    result = []
+    for ip in findPattern(r"([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})[^\d]",content):
+        if validators.ip_address.ipv4(ip):
+            result.append(ip)
     return result
 
 #Delete duplicates in a list 
