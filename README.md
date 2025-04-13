@@ -9,6 +9,8 @@ Python script to find URLs from a web page and spidering a website
 
 ## Features
 
+```
 [+] Find URLs in all pages (HTML, JS, ...)
 [+] Find potential API paths
 [+] Save results to files
+```
