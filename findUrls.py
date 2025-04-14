@@ -88,7 +88,7 @@ def main():
     ips = getIPS(content)
     if len(ips) != 0:
         for ip in ips:
-            print('[+] New IP found: ' + str(ip))
+            print('[?] Potential IP found: ' + str(ip))
             FOUND_IPS.append(str(ip))
         writeIPStoFile(FOUND_IPS)
 
@@ -134,7 +134,7 @@ def main():
                     ips = getIPS(content)
                     if len(ips) != 0:
                         for ip in ips:
-                            print('[+] New IP found: ' + str(ip))
+                            print('[?] Potential IP found: ' + str(ip))
                             FOUND_IPS.append(str(ip))
                         writeIPStoFile(FOUND_IPS)
 
@@ -379,7 +379,7 @@ def getURLS(content):
 #(str --> list)
 def getIPS(content):
     result = []
-    for ip in findPattern(r"([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})[^\d]",content):
+    for ip in findPattern(r"[^\d\.]([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})[^\d\.]",content):
         if validators.ip_address.ipv4(ip):
             result.append(ip)
     return result
