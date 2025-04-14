@@ -461,6 +461,7 @@ def buildURLS(url_list,current_url):
                 print("[-] Invalid URL found: " + new_url)
         elif link[:4] == 'http' :
             new_link = cleanJSUrl(link)
+            new_link = new_link.replace("\\/","/")
             built_scheme = urlparse(new_link).scheme
             built_netloc = urlparse(new_link).netloc
             built_path = urlparse(new_link).path
@@ -478,7 +479,7 @@ def buildURLS(url_list,current_url):
         elif link[:10] == "data:image" :
             pass
         elif validators.url(link) :
-            result.append(link)
+            result.append(link)  
         elif validators.url(buildURL(scheme=built_scheme,netloc=built_netloc,path=built_path,params=built_params,query=built_query,fragment=built_fragment)) :
             result.append(buildURL(scheme=built_scheme,netloc=built_netloc,path=built_path,params=built_params,query=built_query,fragment=built_fragment))
         elif validators.url(buildURL(scheme=built_scheme,netloc=built_netloc,path='/'+built_path,params=built_params,query=built_query,fragment=built_fragment)) :
